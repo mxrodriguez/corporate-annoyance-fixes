@@ -109,8 +109,7 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser
 ```
 corporate-annoyance-fixes/
 ├── hide_zscaler_popup.ps1    # The main popup-hiding script
-├── README.md                # This documentation
-└── calibre                  # Other configuration files
+└── README.md                # This documentation
 ```
 
 ## 🤝 Contributing
