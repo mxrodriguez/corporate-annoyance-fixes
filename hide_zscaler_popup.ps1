@@ -1,42 +1,45 @@
 # Enhanced Zscaler Authentication Popup Script
 # This script hides/minimizes Zscaler authentication windows without killing processes
-# Version 2.0 - Improved detection and debugging
+# Version 2.1 - Fixed false positives with browser windows
 
-Add-Type @"
-    using System;
-    using System.Runtime.InteropServices;
-    using System.Text;
-    
-    public class Win32 {
-        [DllImport("user32.dll")]
-        public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+# Check if Win32 type already exists to avoid "type already exists" error
+if (-not ([System.Management.Automation.PSTypeName]'Win32').Type) {
+    Add-Type @"
+        using System;
+        using System.Runtime.InteropServices;
+        using System.Text;
         
-        [DllImport("user32.dll")]
-        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-        
-        [DllImport("user32.dll")]
-        public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-        
-        [DllImport("user32.dll")]
-        public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-        
-        [DllImport("user32.dll")]
-        public static extern int GetWindowTextLength(IntPtr hWnd);
-        
-        [DllImport("user32.dll")]
-        public static extern bool IsWindowVisible(IntPtr hWnd);
-        
-        [DllImport("user32.dll")]
-        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-        
-        public const int SW_HIDE = 0;
-        public const int SW_MINIMIZE = 6;
-        
-        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-    }
+        public class Win32 {
+            [DllImport("user32.dll")]
+            public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+            
+            [DllImport("user32.dll")]
+            public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+            
+            [DllImport("user32.dll")]
+            public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+            
+            [DllImport("user32.dll")]
+            public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+            
+            [DllImport("user32.dll")]
+            public static extern int GetWindowTextLength(IntPtr hWnd);
+            
+            [DllImport("user32.dll")]
+            public static extern bool IsWindowVisible(IntPtr hWnd);
+            
+            [DllImport("user32.dll")]
+            public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+            
+            public const int SW_HIDE = 0;
+            public const int SW_MINIMIZE = 6;
+            
+            public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+        }
 "@
+}
 
-Write-Host "Enhanced Zscaler Popup Ninja v2.0 - Press Ctrl+C to stop" -ForegroundColor Green
+Write-Host "Enhanced Zscaler Popup Ninja v2.1 - Press Ctrl+C to stop" -ForegroundColor Green
 Write-Host "Monitoring every 1 second for faster detection..." -ForegroundColor Yellow
 
 $hiddenCount = 0
@@ -85,18 +88,28 @@ while ($true) {
         }
     }
     
-    # Method 3: Aggressive search - hide any window with Zscaler-related keywords
-    $zscalerKeywords = @("zscaler", "zcc", "authentication", "sign in", "login")
+    # Method 3: Targeted search - Only check Zscaler processes for authentication windows
+    # Exclude common browsers and other legitimate applications
+    $excludedProcesses = @("chrome", "firefox", "edge", "msedge", "iexplore", "opera", "brave", "vivaldi", "safari")
+    $zscalerKeywords = @("zscaler", "zcc")
     
-    Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | ForEach-Object {
+    Get-Process | Where-Object { 
+        $_.MainWindowTitle -ne "" -and 
+        ($_.ProcessName.ToLower().Contains("zsa") -or $_.ProcessName.ToLower().Contains("zep") -or $_.ProcessName.ToLower().Contains("zscaler"))
+    } | ForEach-Object {
         $windowTitle = $_.MainWindowTitle.ToLower()
         $processName = $_.ProcessName.ToLower()
         
-        # Check if window title or process name contains Zscaler keywords
-        foreach ($keyword in $zscalerKeywords) {
-            if (($windowTitle.Contains($keyword) -or $processName.Contains($keyword)) -and 
-                ($processName.Contains("zsa") -or $processName.Contains("zep") -or $windowTitle.Contains("zscaler"))) {
-                
+        # Skip if this is a browser or other excluded process
+        $isExcluded = $excludedProcesses | Where-Object { $processName.Contains($_) }
+        if ($isExcluded) {
+            return  # Skip this process
+        }
+        
+        # Check if window title contains authentication-related terms AND it's from a Zscaler process
+        $authKeywords = @("authentication", "sign in", "login", "required")
+        foreach ($keyword in $authKeywords) {
+            if ($windowTitle.Contains($keyword)) {
                 $hiddenCount++
                 Write-Host "$(Get-Date): [Method 3] Hiding '$($_.ProcessName)' window: '$($_.MainWindowTitle)' (Count: $hiddenCount)" -ForegroundColor Red
                 [Win32]::ShowWindow($_.MainWindowHandle, [Win32]::SW_HIDE) | Out-Null
