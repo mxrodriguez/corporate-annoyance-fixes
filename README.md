@@ -27,15 +27,15 @@ Tired of Zscaler's authentication popups interrupting your workflow? This PowerS
 ### Option 1: Direct Download
 ```powershell
 # Download and run immediately
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mxrodriguez/dotfiles/master/hide_zscaler_popup.ps1" -OutFile "hide_zscaler_popup.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mxrodriguez/corporate-annoyance-fixes/master/hide_zscaler_popup.ps1" -OutFile "hide_zscaler_popup.ps1"
 .\hide_zscaler_popup.ps1
 ```
 
 ### Option 2: Clone Repository
 ```powershell
 # Clone the repo
-git clone https://github.com/mxrodriguez/dotfiles.git
-cd dotfiles
+git clone https://github.com/mxrodriguez/corporate-annoyance-fixes.git
+cd corporate-annoyance-fixes
 
 # Run the script
 .\hide_zscaler_popup.ps1
@@ -107,10 +107,10 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser
 ## 📊 What's in This Repository
 
 ```
-dotfiles/
+corporate-annoyance-fixes/
 ├── hide_zscaler_popup.ps1    # The main popup-hiding script
 ├── README.md                # This documentation
-└── calibre                  # Other dotfiles/configs
+└── calibre                  # Other configuration files
 ```
 
 ## 🤝 Contributing
